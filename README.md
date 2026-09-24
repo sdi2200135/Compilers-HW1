@@ -1,4 +1,4 @@
-# Compilers-HW1
+# Recursive Descent Parser and IR Compiler (Compilers-HW1)
 
 A compilers course project developed at NKUA. It consists of two parts:
 
