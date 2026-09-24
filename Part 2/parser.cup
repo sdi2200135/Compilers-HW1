@@ -1,0 +1,84 @@
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            SEMI, CONCAT, LPAREN, RPAREN, PREFIX, SUFFIX, EQUALITY, REVERSE, LBRACE, RBRACE, COMMA, IF, ELSE;        
+terminal String     VAR;
+terminal String     STRING;
+
+/*  Non terminals */
+non terminal            expr_list;
+non terminal String     expr, expr1, expr2, expr3, comma_manage, func, func_call, if_else;      // used to store evaluated subexpressions
+
+/**
+ *  Precedence Declarations
+ */
+precedence left PREFIX;
+precedence left SUFFIX;
+precedence left EQUALITY;
+precedence left CONCAT;
+precedence left REVERSE;
+
+
+/**
+ *  The Grammar Rules
+ */
+expr_list ::= expr_list expr:e    {: System.out.println(e) ;:}
+            | expr: e             {: System.out.println(e) ;:}
+;
+
+expr  ::= expr1:e        {: RESULT = e ;:}
+        | func:f         {: RESULT = f ;:} 
+;   
+
+expr1  ::= expr3:e          {: RESULT = e ;:}
+         | if_else:ifc      {: RESULT = ifc ;:} 
+;
+
+expr2  ::= expr3:e             {: RESULT = e ;:}
+         | comma_manage:cm     {: RESULT = cm ;:}
+;
+
+expr3  ::= expr3:e1 CONCAT expr3:e2     {: RESULT = e1 + " + " + e2 ;:}
+         | expr3:e1 EQUALITY expr3:e2   {: RESULT = e1 + " = " + e2 ;:}
+         | expr3:e1 PREFIX expr3:e2     {: RESULT = e1 + " prefix " + e2  ;:}
+         | expr3:e1 SUFFIX expr3:e2     {: RESULT = "reverse "+ e1 + " prefix " + "reverse "+ e2  ;:}
+         | REVERSE expr3:e              {: RESULT = "reverse "+ e ;:}
+         | STRING:s                     {: RESULT = "\"" + s + "\"" ;:}
+         | VAR:v                        {: RESULT = v ;:}
+         | func_call:fc                 {: RESULT = fc ;:}                    
+;
+
+comma_manage  ::= expr3:w COMMA expr2:e    {: RESULT = w + ", " + e ;:}
+;
+
+func  ::= VAR:v LPAREN RPAREN LBRACE RBRACE                       {: RESULT = "syntax error!" ;:} //τη συγκεκριμενη περιπτωση να τη διαχειριστώ ως syntax error
+        | VAR:v LPAREN RPAREN LBRACE expr1:e RBRACE               {: RESULT = v + "(" + ")" + "{\n\t" + e + "\n}\n" ;:}
+        | VAR:v LPAREN expr2:e RPAREN LBRACE expr1:e1 RBRACE      {: RESULT = v + "(" + e + ")" + "{\n\t" + e1 + "\n}\n" ;:}   
+;
+
+func_call  ::= VAR:v LPAREN RPAREN           {: RESULT = v + "(" + ")" ;:}
+             | VAR:v LPAREN expr2:e RPAREN   {: RESULT = v + "(" + e + ")" ;:}
+;
+
+if_else  ::= IF LPAREN expr3:e RPAREN expr1:e1 ELSE expr1:e2    
+                            {: RESULT = "if" + "(" + e + ")" + "\n" + e1 + "\n" + "else" + "\n" + e2 + "\n" ;:}
+;

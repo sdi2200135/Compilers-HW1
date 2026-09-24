@@ -1,0 +1,119 @@
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser2(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            SEMI, CONCAT, LPAREN, RPAREN, PREFIX, SUFFIX, EQUALITY, REVERSE, LBRACE, RBRACE, COMMA, IF, ELSE;        
+terminal String     VAR;
+terminal String     STRING;
+
+/*  Non terminals */
+non terminal            program;
+non terminal String     expr_list, expr_list1;
+non terminal String     expr, expr1,  expr2, expr3, expr4, expr5, expr6, comma_manage, comma_manage1;      // used to store evaluated subexpressions
+non terminal String     func, func_call, func_call1, if_else;
+
+/**
+ *  Precedence Declarations
+ */
+
+precedence left PREFIX;
+precedence left SUFFIX;
+precedence left EQUALITY;
+precedence left CONCAT;
+precedence left REVERSE;
+precedence left COMMA;
+
+/**
+ *  The Grammar Rules
+ */
+
+program ::= expr_list:f expr_list1:e
+    {: System.out.println("public class Translated{\n" + f + "\npublic static void main(String[] args){\n" + e + "\n}\n}"); :}
+;
+
+expr_list ::= expr_list:el expr:e    {: RESULT = el + "\n" + e; :}
+            | expr:e                 {: RESULT = e; :}
+;
+
+expr   ::= func:fc {: RESULT = "public static String " + fc ;:}
+;
+
+expr6 ::= expr3:e       {: RESULT = "System.out.println( " + e + " );" ;:}
+        | func_call:fc  {: RESULT = "System.out.println( " + fc + " );" ;:}
+;
+
+expr_list1 ::= expr_list1:el expr6:e   {: RESULT = el + "\n" + e; :}
+             | expr6:e                 {: RESULT = e; :}
+;  
+
+expr1  ::= expr3:e          {: RESULT = "return " + e  + ";" ;:}
+         | if_else:ifc      {: RESULT = ifc ;:}
+         | func_call:fc     {: RESULT = "return " +  fc + ";" ;:} 
+;
+
+expr5 ::= expr3:e       {: RESULT = e ;:}
+        | func_call1:fc {: RESULT = fc ;:}
+;
+
+expr2 ::= expr5:e          {: RESULT = e ;:}
+        | comma_manage1:cm {: RESULT = cm ;:}
+;
+
+comma_manage1 ::= expr5:w COMMA expr2:e {: RESULT = w + ", " + e ;:}
+;
+
+expr4 ::= expr3:w COMMA expr5:e {: RESULT = "String " + w + ", " + "String " + e ;:}
+;
+
+comma_manage ::= expr5:w COMMA comma_manage:e {: RESULT = w + ", " + "String " + e ;:}
+;
+
+/*expr4 ::= comma_manage:cm {: RESULT = "String " + cm ;:}
+;
+
+comma_manage ::= expr5:w COMMA comma_manage:e {: RESULT = w + ", " + "String " + e ;:}
+;*/
+
+expr3  ::= expr3:e1 CONCAT expr3:e2     {: RESULT = e1 + " + " + e2 ;:}
+         | expr3:e1 EQUALITY expr3:e2   {: RESULT = e1 + " = " + e2 ;:}
+         | expr3:e1 PREFIX expr3:e2     {: RESULT = "((" + e1 + ").toString()).startsWith(" + e2 + ".toString())" ;:}
+         | REVERSE expr3:e              {: RESULT = "new StringBuilder("+ e +").reverse()" ;:}
+         | STRING:s                     {: RESULT = "\"" + s + "\"" ;:}
+         | VAR:v                        {: RESULT = v ;:}                   
+;
+
+func  ::= VAR:v LPAREN RPAREN LBRACE RBRACE                       {: RESULT = "syntax error!" ;:} 
+        | VAR:v LPAREN RPAREN LBRACE expr1:e RBRACE               {: RESULT = v + "(" + ")" + "{\n\t " + e + "\n}\n" ;:}
+        | VAR:v LPAREN expr4:e RPAREN LBRACE expr1:e1 RBRACE      {: RESULT = v + "("  +  e + ")" + "{\n\t " + e1 + "\n}\n" ;:}
+        | VAR:v LPAREN expr2:e RPAREN LBRACE expr1:e1 RBRACE      {: RESULT = v + "( String "  +  e + ")" + "{\n\t " + e1 + "\n}\n" ;:}   
+;
+
+func_call  ::= VAR:v LPAREN RPAREN           {: RESULT =  v + "(" + ")" ;:}
+             | VAR:v LPAREN expr2:e RPAREN   {: RESULT = v + "(" + e + ")" ;:}
+;
+
+func_call1  ::= VAR:v LPAREN RPAREN          {: RESULT = v + "(" + ")" ;:}
+             | VAR:v LPAREN expr4:e RPAREN   {: RESULT =  v + "(" + e + ")" ;:}
+;
+
+if_else  ::= IF LPAREN expr5:e RPAREN expr1:e1 ELSE expr1:e2    
+                            {: RESULT = "if" + "(" +  e + ")" + "\n" + e1 + "\n" + "else" + "\n" + e2 + "\n" ;:}
+;
